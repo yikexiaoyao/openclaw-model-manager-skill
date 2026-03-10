@@ -1,0 +1,56 @@
+{
+  "skill": {
+    "name": "model-manager",
+    "version": "1.0.0",
+    "description": "通用模型管理技能 - 扫描、列表、切换",
+    "author": "OpenClaw Community"
+  },
+  "commands": {
+    "primary": "models",
+    "aliases": ["model", "ml", "模型"],
+    "subcommands": {
+      "list": ["列表", "ls"],
+      "status": ["状态", "st"],
+      "switch": ["切换", "sw"],
+      "scan": ["扫描", "sc"],
+      "refresh": ["刷新", "rf"]
+    }
+  },
+  "display": {
+    "showEmojis": true,
+    "showContext": true,
+    "showAuthStatus": true,
+    "maxModelsPerPage": 0,
+    "cacheDuration": 300,
+    "templates": {
+      "list": "templates/model_list.md",
+      "status": "templates/status_report.md",
+      "switch": "templates/switch_result.md",
+      "error": "templates/error_message.md"
+    }
+  },
+  "behavior": {
+    "autoRefresh": true,
+    "confirmSwitch": false,
+    "logSwitches": true,
+    "backupBeforeSwitch": true,
+    "enableCache": true
+  },
+  "monitoring": {
+    "enabled": true,
+    "checkInterval": 300,
+    "failureThreshold": 3,
+    "autoRecover": true,
+    "notifications": {
+      "enable": true,
+      "onSwitch": true,
+      "onRecovery": true,
+      "onFailure": false
+    }
+  },
+  "security": {
+    "allowAllUsers": true,
+    "logLevel": "info",
+    "maxSwitchesPerMinute": 10
+  }
+}

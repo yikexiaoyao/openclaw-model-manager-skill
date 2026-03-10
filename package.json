@@ -1,0 +1,21 @@
+{
+  "name": "model-manager-skill",
+  "version": "1.0.0",
+  "description": "OpenClaw通用模型管理技能 - 扫描、列表、切换模型",
+  "main": "index.js",
+  "type": "module",
+  "author": "OpenClaw Community",
+  "license": "MIT",
+  "openclaw": {
+    "skill": true,
+    "version": ">=2026.3.0",
+    "permissions": ["exec", "read", "write"],
+    "triggers": ["message"],
+    "providesTools": ["model_scanner", "model_switcher"]
+  },
+  "keywords": ["models", "model-manager", "openclaw", "skill"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/skills/model-manager-skill"
+  }
+}
