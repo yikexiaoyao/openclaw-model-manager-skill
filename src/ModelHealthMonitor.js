@@ -136,19 +136,43 @@ export class ModelHealthMonitor {
     }
 
     try {
-      // 方法1: 使用openclaw chat测试（简单测试）
-      const testCommand = `openclaw chat --model ${this.currentStatus.primaryModel.id} --prompt "test" --max-tokens 1 --timeout 10`;
+      // 从配置文件读取模型提供商信息
+      const configPath = '/root/.openclaw/openclaw.json';
+      const fs = await import('fs');
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       
-      const { stdout, stderr } = await execAsync(testCommand, { timeout: 15000 });
+      const modelId = this.currentStatus.primaryModel.id;
+      const [providerName, modelName] = modelId.split('/');
       
-      // 检查响应
-      if (stderr && stderr.includes('error') && !stderr.includes('warning')) {
-        console.log(`❌ 模型测试失败: ${stderr.substring(0, 100)}`);
+      // 查找提供商配置
+      const provider = config.models?.providers?.[providerName];
+      if (!provider || !provider.apiKey) {
+        console.log(`❌ 未找到提供商配置或 API Key: ${providerName}`);
         return false;
       }
       
-      // 如果有响应，认为模型健康
-      return true;
+      // 发送简单请求测试模型可用性
+      const response = await fetch(`${provider.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${provider.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [{ role: 'user', content: 'hi' }],
+          max_tokens: 1
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ 模型健康检查通过');
+        return true;
+      } else {
+        const error = await response.text();
+        console.log(`❌ 模型健康检查失败: ${error.substring(0, 100)}`);
+        return false;
+      }
       
     } catch (error) {
       console.log(`❌ 模型测试异常: ${error.message}`);
@@ -341,12 +365,37 @@ export class ModelHealthMonitor {
         return;
       }
       
+      // 从配置文件读取 fallbacks
+      const fs = await import('fs');
+      const configPath = '/root/.openclaw/openclaw.json';
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      const fallbackIds = config.agents?.defaults?.model?.fallbacks || [];
+      
       // 查找主用模型（标记为default的）
       const primaryModel = models.find(m => m.isDefault) || models[0];
       
-      // 查找备用模型（第一个非主用模型）
-      const backupModel = models.find(m => !m.isDefault && m.id !== primaryModel.id) || 
-                         (models.length > 1 ? models[1] : null);
+      // 查找备用模型（从 fallbacks 配置）
+      let backupModel = null;
+      for (const fallbackId of fallbackIds) {
+        backupModel = models.find(m => m.id === fallbackId);
+        if (backupModel) break;
+      }
+      
+      // 如果没有配置 fallback，优先选择不同提供商的模型
+      if (!backupModel) {
+        const primaryProvider = primaryModel.id.split('/')[0];
+        
+        // 首先尝试找不同提供商的模型
+        backupModel = models.find(m => {
+          const modelProvider = m.id.split('/')[0];
+          return !m.isDefault && m.id !== primaryModel.id && modelProvider !== primaryProvider;
+        });
+        
+        // 如果没有不同提供商的模型，使用第一个非主用模型
+        if (!backupModel) {
+          backupModel = models.find(m => !m.isDefault && m.id !== primaryModel.id);
+        }
+      }
       
       this.currentStatus.primaryModel = primaryModel;
       this.currentStatus.backupModel = backupModel;

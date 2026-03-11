@@ -69,13 +69,22 @@ export class CommandProcessor {
    */
   _normalizeCommand(rawCommand) {
     // 检查主命令
-    if (this.commands.primary.includes(rawCommand)) {
+    const primaryCommands = ['models', 'monitor', 'restart', 'help'];
+    
+    // 直接匹配主命令
+    if (primaryCommands.includes(rawCommand)) {
+      return rawCommand;
+    }
+    
+    // 检查 models 别名
+    const modelsAliases = this.commands.aliases['models'] || [];
+    if (modelsAliases.includes(rawCommand)) {
       return 'models';
     }
 
-    // 检查别名
+    // 检查其他别名
     for (const [mainCmd, aliases] of Object.entries(this.commands.aliases)) {
-      if (aliases.includes(rawCommand)) {
+      if (mainCmd !== 'models' && aliases.includes(rawCommand)) {
         return mainCmd;
       }
     }
@@ -90,6 +99,8 @@ export class CommandProcessor {
     switch (command) {
       case 'models':
         return await this._handleModelsCommand(args, context);
+      case 'restart':
+        return await this._restartGateway(context);
       default:
         throw new Error(`未实现的命令: ${command}`);
     }
@@ -205,7 +216,32 @@ export class CommandProcessor {
       description: this._getModelDescription(targetModel)
     };
 
+    // 添加重启提示
+    result.needsRestart = true;
+    result.restartCommand = 'openclaw gateway restart';
+
     return this.formatter.formatSwitchResult(result, modelInfo);
+  }
+  
+  /**
+   * 重启 OpenClaw Gateway
+   */
+  async _restartGateway(context) {
+    try {
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execAsync = promisify(exec);
+      
+      // 执行重启命令
+      await execAsync('openclaw gateway restart');
+      
+      return `🔄 OpenClaw Gateway 重启中...\n${'='.repeat(40)}\n\n` +
+             `✅ 重启命令已发送\n` +
+             `⏰ 预计 10-30 秒后完全启动\n\n` +
+             `💡 重启后新模型配置将生效`;
+    } catch (error) {
+      throw new Error(`重启失败: ${error.message}`);
+    }
   }
 
   /**
@@ -229,12 +265,13 @@ export class CommandProcessor {
     const config = this.config.commands || {};
     
     return {
-      primary: [config.primary || 'models', ...(config.aliases || [])],
+      primary: [config.primary || 'models', ...(config.aliases || []), 'restart'],
       aliases: {
         'models': config.aliases || [],
         'status': config.subcommands?.status || [],
         'refresh': config.subcommands?.refresh || [],
-        'scan': config.subcommands?.scan || []
+        'scan': config.subcommands?.scan || [],
+        'restart': ['重启', 'reboot']
       }
     };
   }

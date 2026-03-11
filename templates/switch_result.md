@@ -8,6 +8,20 @@
 📱 下次切换使用: {{primaryCommand}} {{index}}
 ⏰ 切换时间: {{timestamp}}
 
+{{#needsRestart}}
+⚠️ 重要提示
+{{separator}}
+
+🔄 配置已修改，但需要重启 OpenClaw 才能生效！
+
+💡 请执行以下命令重启 Gateway：
+   {{restartCommand}}
+
+⏰ 预计 10-30 秒后完全启动
+
+📋 重启后新模型配置将生效
+{{/needsRestart}}
+
 {{#hasBackup}}
 🛡️ 配置备份已创建: {{backupFile}}
 {{/hasBackup}}

@@ -102,7 +102,9 @@ export class ResponseFormatter {
         primaryCommand: this.primaryCommand,
         timestamp: new Date().toLocaleString('zh-CN'),
         hasBackup: !!result.backupFile,
-        backupFile: result.backupFile
+        backupFile: result.backupFile,
+        needsRestart: result.needsRestart || false,
+        restartCommand: result.restartCommand || 'restart'
       };
     } else {
       const suggestions = this._getErrorSuggestions(result.error);

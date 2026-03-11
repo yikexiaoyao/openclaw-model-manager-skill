@@ -1,7 +1,12 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import fs from 'fs';
 
 const execAsync = promisify(exec);
+
+// 同步读取配置
+const readFileSync = fs.readFileSync;
+const writeFileSync = fs.writeFileSync;
 
 /**
  * 模型扫描器 - 扫描OpenClaw配置的模型
@@ -67,20 +72,30 @@ export class ModelScanner {
         await this._createBackup();
       }
 
-      // 执行切换命令
-      const { stdout, stderr } = await execAsync(`openclaw models set ${modelId}`);
+      // 直接修改配置文件
+      const configPath = '/root/.openclaw/openclaw.json';
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       
-      if (stderr && !stderr.includes('Updated')) {
-        throw new Error(`切换失败: ${stderr}`);
+      // 验证模型是否存在
+      if (!config.agents?.defaults?.models?.[modelId]) {
+        throw new Error(`模型不存在: ${modelId}`);
       }
+      
+      // 修改主用模型
+      config.agents.defaults.model.primary = modelId;
+      
+      // 写入配置
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
       // 清除缓存
       this.cache = null;
       
       return {
         success: true,
-        message: stdout.trim(),
-        modelId
+        message: `已切换到 ${modelId}`,
+        modelId,
+        needsRestart: true,
+        restartCommand: 'openclaw gateway restart'
       };
     } catch (error) {
       return {
@@ -126,7 +141,7 @@ export class ModelScanner {
     // 跳过表头
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (!line) continue;
+      if (!line || line.startsWith('Model')) continue;
 
       const model = this._parseModelLine(line, i);
       if (model) {
@@ -134,32 +149,136 @@ export class ModelScanner {
       }
     }
 
+    // 从配置文件读取 fallback 信息
+    this._enrichWithFallbackInfo(models);
+    
     return models;
+  }
+  
+  /**
+   * 从配置文件读取 fallback 信息
+   */
+  async _enrichWithFallbackInfo(models) {
+    try {
+      const configPath = '/root/.openclaw/openclaw.json';
+      const configData = await fs.promises.readFile(configPath, 'utf8');
+      const config = JSON.parse(configData);
+      const fallbacks = config.agents?.defaults?.model?.fallbacks || [];
+      
+      models.forEach(m => {
+        m.isFallback = fallbacks.includes(m.id);
+      });
+    } catch (error) {
+      console.warn('读取 fallback 配置失败:', error.message);
+    }
+  }
+  
+  /**
+   * 从配置文件解析模型
+   */
+  _parseConfigModels(config) {
+    const models = [];
+    const providers = config.models?.providers || {};
+    const defaults = config.agents?.defaults || {};
+    const primaryModel = defaults.model?.primary || '';
+    const fallbackModels = defaults.model?.fallbacks || [];
+    
+    let index = 1;
+    
+    // 遍历所有提供商
+    for (const [providerName, provider] of Object.entries(providers)) {
+      const providerModels = provider.models || [];
+      
+      for (const model of providerModels) {
+        const modelId = `${providerName}/${model.id}`;
+        const isPrimary = modelId === primaryModel;
+        const isFallback = fallbackModels.includes(modelId);
+        
+        models.push({
+          index: index++,
+          id: modelId,
+          displayName: model.name || this._getDisplayName(modelId),
+          provider: providerName,
+          isDefault: isPrimary,
+          isFallback: isFallback,
+          isConfigured: true,
+          context: this._formatContext(model.contextWindow),
+          maxTokens: model.maxTokens,
+          authStatus: provider.apiKey ? '✅' : '⚠️',
+          emoji: this._getEmojiForModel(modelId),
+          cost: model.cost
+        });
+      }
+    }
+    
+    // 按主用、fallback、其他排序
+    models.sort((a, b) => {
+      if (a.isDefault && !b.isDefault) return -1;
+      if (!a.isDefault && b.isDefault) return 1;
+      if (a.isFallback && !b.isFallback) return -1;
+      if (!a.isFallback && b.isFallback) return 1;
+      return 0;
+    });
+    
+    // 重新编号
+    models.forEach((m, i) => m.index = i + 1);
+    
+    return models;
+  }
+  
+  /**
+   * 格式化上下文窗口显示
+   */
+  _formatContext(contextWindow) {
+    if (!contextWindow) return 'unknown';
+    if (contextWindow >= 1000000) return `${(contextWindow / 1000000).toFixed(0)}M`;
+    if (contextWindow >= 1000) return `${(contextWindow / 1000).toFixed(0)}k`;
+    return contextWindow.toString();
   }
 
   /**
    * 解析单行模型信息
    */
   _parseModelLine(line, index) {
-    // 示例行: "custom-api-deepseek-com/deepseek-chat      text       125k     no    yes   default,configured"
-    const parts = line.split(/\s+/).filter(p => p);
+    // 示例行: "bailian/qwen3.5-plus                       text+image 977k     no    yes   default,configured"
+    const trimmedLine = line.trim();
+    if (!trimmedLine || trimmedLine.startsWith('Model')) return null;
     
-    if (parts.length < 6) return null;
-
-    const modelId = parts[0];
-    const context = parts[2];
-    const auth = parts[4];
-    const tags = parts.slice(5).join(' ');
-
+    // 使用正则表达式匹配各列
+    // 格式: Model Input Ctx Local Auth Tags
+    const match = trimmedLine.match(/^([^\s]+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.+)$/);
+    
+    if (!match) {
+      // 尝试简单分割
+      const parts = trimmedLine.split(/\s+/).filter(p => p);
+      if (parts.length < 6) return null;
+      
+      return this._createModelObject(index, parts[0], parts[1], parts[2], parts[4], parts.slice(5).join(' '));
+    }
+    
+    const [, modelId, input, context, local, auth, tags] = match;
+    
+    return this._createModelObject(index, modelId, input, context, auth, tags.trim());
+  }
+  
+  /**
+   * 创建模型对象
+   */
+  _createModelObject(index, modelId, input, context, auth, tags) {
+    const isDefault = tags.includes('default');
+    const isConfigured = tags.includes('configured');
+    
     return {
       index: index,
       id: modelId,
       displayName: this._getDisplayName(modelId),
-      isDefault: tags.includes('default'),
-      isConfigured: tags.includes('configured'),
+      input: input,
+      isDefault: isDefault,
+      isConfigured: isConfigured,
+      isFallback: false, // 需要从配置文件读取
       context: context,
       authStatus: auth === 'yes' ? '✅' : auth === 'no' ? '⚠️' : '❌',
-      tags: tags.split(','),
+      tags: tags.split(',').filter(t => t),
       emoji: this._getEmojiForModel(modelId)
     };
   }
