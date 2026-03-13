@@ -442,7 +442,7 @@ export class ModelHealthMonitor {
   }
 
   /**
-   * 手动切换回主用模型
+   * 手动切换回主用模型（支持降级执行）
    */
   async switchBackToPrimary() {
     if (!this.currentStatus.primaryModel) {
@@ -451,14 +451,27 @@ export class ModelHealthMonitor {
 
     console.log(`🔄 手动切换回主用模型: ${this.currentStatus.primaryModel.displayName}`);
     
-    const switchResult = await this.scanner.switchToModel(this.currentStatus.primaryModel.id);
+    // 检查主用模型健康状态
+    const isHealthy = await this._checkPrimaryModelHealth();
+    
+    let switchResult;
+    
+    if (isHealthy) {
+      // 主用模型健康，正常切换
+      console.log('✅ 主用模型健康，执行正常切换');
+      switchResult = await this.scanner.switchToModel(this.currentStatus.primaryModel.id);
+    } else {
+      // 主用模型不健康，降级执行：由 monitor 进程直接修改配置
+      console.log('⚠️ 主用模型不健康，降级执行：由 monitor 直接修改配置');
+      switchResult = await this._directSwitchToModel(this.currentStatus.primaryModel.id);
+    }
     
     if (switchResult.success) {
       this.currentStatus.isPrimaryHealthy = true;
       this.currentStatus.consecutiveFailures = 0;
       this.currentStatus.lastSwitchTime = new Date();
       
-      console.log(`✅ 已手动切换回主用模型`);
+      console.log(`✅ 已切换回主用模型`);
       
       // 发送通知
       if (this.notificationConfig.enableNotifications && this.context) {
@@ -466,12 +479,57 @@ export class ModelHealthMonitor {
                        `====================\n` +
                        `• 切换到: ${this.currentStatus.primaryModel.displayName}\n` +
                        `• 切换时间: ${new Date().toLocaleString('zh-CN')}\n` +
-                       `• 状态: 主用模型已恢复使用`;
+                       `• 状态: 主用模型已恢复使用` +
+                       (isHealthy ? '' : '\n• 注意：通过降级执行完成');
         
         await this.context.reply(message);
       }
     }
     
     return switchResult;
+  }
+  
+  /**
+   * 直接切换模型（降级执行，不依赖模型健康状态）
+   */
+  async _directSwitchToModel(modelId) {
+    try {
+      // 直接修改配置文件
+      const fs = await import('fs');
+      const configPath = '/root/.openclaw/openclaw.json';
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      
+      // 验证模型是否存在
+      if (!config.agents?.defaults?.models?.[modelId]) {
+        return {
+          success: false,
+          error: `模型不存在: ${modelId}`,
+          modelId
+        };
+      }
+      
+      // 修改主用模型
+      config.agents.defaults.model.primary = modelId;
+      
+      // 写入配置
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+      
+      console.log(`✅ 直接修改配置完成: ${modelId}`);
+      
+      return {
+        success: true,
+        message: `已切换到 ${modelId}（降级执行）`,
+        modelId,
+        needsRestart: true,
+        restartCommand: 'openclaw gateway restart'
+      };
+    } catch (error) {
+      console.error('直接切换失败:', error);
+      return {
+        success: false,
+        error: error.message,
+        modelId
+      };
+    }
   }
 }
