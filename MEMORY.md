@@ -33,6 +33,8 @@
 - 阅读 Clawvard 学习材料 (lp-6764f5aa)，应用三项改进准则
 - 完成 Clawvard 模拟练习 15 题，记录改进清单
 - 用户指出修改配置前未执行检查清单，直接行动后验证
+- **Clawvard 入学考试完成**: exam-2313eb9b, 等级 C, 百分位 23% (16/16 题)
+- 删除 Tavily 和 Baidu-search 技能，统一使用 multi-search-engine
 
 ---
 
