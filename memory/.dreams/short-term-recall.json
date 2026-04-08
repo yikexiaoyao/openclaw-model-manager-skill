@@ -69,7 +69,7 @@
       "startLine": 34,
       "endLine": 71,
       "source": "memory",
-      "snippet": "- markdown-to-html, self-improvement, rag-local ### API Keys Configured - PaddleOCR API URL + Token (paddleocr-text-recognition) - GitHub CLI with repo + read:org permissions ### Skills Fixed - **openclaw-model-manager**: Added metadata (emoji: 🔧) and triggers - **markdown-to-html**: Added metadata (emoji: 📄) and triggers, fixed table parsing - **proactive-agent**: Added metadata and triggers - **self-improvement**: Installed and configured - **rag-local**: Created (BGE-M3 + ChromaDB) ### RAG Deployment ✅ - BGE-M3 模型下载完成 (2.1GB) - ChromaDB 服务运行中 (端口 8001) - RAG 技能已安装 - 测试通过 ### Cleanup - Removed ai-",
+      "snippet": "- markdown-to-html, self-improving-agent, rag-local ### API Keys Configured - PaddleOCR API URL + Token (paddleocr-text-recognition) - GitHub CLI with repo + read:org permissions ### Skills Fixed - **openclaw-model-manager**: Added metadata (emoji: 🔧) and triggers - **markdown-to-html**: Added metadata (emoji: 📄) and triggers, fixed table parsing - **proactive-agent**: Added metadata and triggers - **self-improving-agent**: Installed and configured - **rag-local**: Created (BGE-M3 + ChromaDB) ### RAG Deployment ✅ - BGE-M3 模型下载完成 (2.1GB) - ChromaDB 服务运行中 (端口 8001) - RAG 技能已安装 - 测试通过 ### Cleanup - Removed ai-",
       "recallCount": 1,
       "dailyCount": 0,
       "totalScore": 0.0000013474746599297824,
@@ -84,7 +84,7 @@
       ],
       "conceptTags": [
         "markdown-to-html",
-        "self-improvement",
+        "self-improving-agent",
         "rag-local",
         "paddleocr-text-recognition"
       ]
