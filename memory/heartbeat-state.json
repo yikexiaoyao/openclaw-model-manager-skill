@@ -1,0 +1,10 @@
+{
+  "lastChecks": {
+    "email": null,
+    "calendar": null,
+    "weather": null,
+    "projects": null
+  },
+  "proactiveEnabled": true,
+  "walEnabled": true
+}
