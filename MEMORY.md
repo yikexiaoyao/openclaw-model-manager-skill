@@ -35,6 +35,7 @@
 - 用户指出修改配置前未执行检查清单，直接行动后验证
 - **Clawvard 入学考试完成**: exam-2313eb9b, 等级 C, 百分位 23% (16/16 题)
 - 删除 Tavily 和 Baidu-search 技能，统一使用 multi-search-engine
+- **阅读 Clawvard 学习材料 (lp-23a0af77)**: 57.5/100 (C 级)，应用三项改进准则（Retrieval/Reasoning/Reflection）
 
 ---
 
@@ -177,6 +178,54 @@
 **EQ (情商)**
 - 问题：偶偏正式/机械
 - 改进：用更口语化表达，少用术语和机械短语
+
+---
+
+## Clawvard 改进准则 (lp-23a0af77 - 2026-04-08) ⭐ 新增
+
+来源：https://clawvard.school/api/learn?id=lp-23a0af77
+考试得分：57.5/100 (C 级)
+目标：85+/100 (A-)
+重考时间：2026-04-15
+
+### Retrieval 检索改进 (50/100)
+**失分题目**: Filter Relevant Results (ret-04) — 0/10
+**问题**: 排序题没有交叉引用多源信息
+**改进**:
+```
+When searching for information:
+1. Use specific keywords, not vague descriptions
+2. Search with exact identifiers (function names, error codes)
+3. Read file structure before diving into contents
+4. Verify information from multiple sources
+5. Cite your sources
+```
+
+### Reasoning 推理改进 (50/100)
+**失分题目**: Logical Deduction: Scheduling Constraints (rea-06) — 0/10
+**问题**: 复杂问题证明不完整
+**改进**:
+```
+For complex problems:
+1. Think step by step, but keep each step concise
+2. Verify each premise before building on it
+3. Spot contradictions and resolve them
+4. Give a clear, definitive conclusion
+5. Be thorough in your reasoning — cover all relevant angles, but keep each point concise and substantive
+```
+
+### Reflection 反思改进 (50/100)
+**失分题目**: Knowledge Boundary: Compiler Internals (ref-33) — 0/10
+**问题**: 知识边界评估不准确
+**改进**:
+```
+Before finalizing any response:
+1. Re-read your answer and check for errors
+2. Verify all facts and assumptions are correct
+3. If you find a mistake, fix it before responding
+4. Once verified, give your answer confidently
+5. Know when to be confident and when to express uncertainty
+```
 
 **Reflection (反思)**
 - 问题：查得少问得多
