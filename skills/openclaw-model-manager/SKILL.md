@@ -77,7 +77,7 @@ C:\Users\Administrator\.openclaw\openclaw.json
 | 命令 | 用途 | 效果 |
 |------|------|------|
 | `skill models list` | 查看所有已配置的模型列表 | 显示模型列表（带序号） |
-| `skill models set <序号或模型名>` | 切换默认主模型 | 更新 `agents.defaults.model.primary` |
+| `skill models set <序号或模型名>` | 切换默认主模型 | 更新 `agents.defaults.model.primary` + 强制切换当前 Session 模型 |
 | `skill models status` | 查看当前模型配置状态 | 显示主模型、备用模型、配置摘要 |
 | `skill models check` | 检查模型连通性 | 测试 API 连接，返回可用/不可用状态 |
 | `skill models test` | 测试模型连接 | 发送测试请求，验证模型响应 |
@@ -118,4 +118,28 @@ skill models update 3 contextWindow 200000  # 更新序号 3 的模型
 
 # 使用完整名称（同样支持）
 skill models set bailian/qwen3.5-plus
+```
+
+### ⚠️ 重要说明
+
+**`skill models set` 行为**：
+- ✅ 修改配置文件（永久生效）
+- ✅ 强制切换当前 Session（立即生效）
+- ✅ 新 Session 自动继承配置
+
+### 推荐用法
+
+**完整切换（配置 + Session 同时生效）**：
+```
+skill models set 2 && /model 2
+```
+
+**只改配置（影响未来新建的 Session）**：
+```
+skill models set 2
+```
+
+**只改当前 Session（不持久化）**：
+```
+/model 2
 ```
